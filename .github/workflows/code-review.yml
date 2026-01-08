@@ -20,7 +20,6 @@ jobs:
 
       - name: "Get Git Diff"
         run: |
-          # Keep the diff clean
           git diff HEAD^ HEAD . ':(exclude)package-lock.json' ':(exclude)yarn.lock' ':(exclude).next/*' > pr_diff.txt
 
       - name: "Prepare JSON Payload"
@@ -32,14 +31,12 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # IMPORTANT: Changed 'v1' to 'v1beta' and model to 'gemini-1.5-flash'
-          # This specifically fixes the 404 error you saw
-          curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}" \
+          # UPDATED MODEL: Using gemini-2.0-flash (The stable 2026 workhorse)
+          curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}" \
             -H 'Content-Type: application/json' \
             -X POST \
             -d @payload.json > review_response.json
           
-          # This helps you see the actual AI text in the logs if it fails again
           echo "--- DEBUG: AI RESPONSE ---"
           cat review_response.json
 
@@ -51,7 +48,6 @@ jobs:
             const data = JSON.parse(fs.readFileSync('review_response.json', 'utf8'));
             const prNumber = context.payload.pull_request.number;
             
-            // Check if we have candidates (successful AI response)
             if (data.candidates && data.candidates[0].content) {
               const reviewText = data.candidates[0].content.parts[0].text;
               await github.rest.issues.createComment({
@@ -61,7 +57,6 @@ jobs:
                 body: "### 🤖 Gemini AI Code Review\n\n" + reviewText
               });
             } else {
-              // If it failed, print the reason clearly in the logs
-              const errorMsg = data.error ? data.error.message : "Safety filters blocked the response";
-              console.log("Gemini failed to generate review: " + errorMsg);
+              const errorMsg = data.error ? data.error.message : "Possible safety block or empty response";
+              console.log("Gemini failed: " + errorMsg);
             }
