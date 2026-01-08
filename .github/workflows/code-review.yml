@@ -17,11 +17,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: "Run AI Review"
-        uses: sshnaidm/gemini-code-review-action@v1
+      - name: "Google Gemini Code Review"
+        uses: google-gemini/pro-code-review-action@v1.1.0
         with:
-          gemini-key: ${{ secrets.GEMINI_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          # Some regions/versions of the SDK require the 'models/' prefix
-          model: "models/gemini-1.5-flash"
-          prompt: "Strict Senior Developer review. Check for unused variables and Tailwind v4 @theme usage."
+          # This action is officially maintained and more stable
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          model: "gemini-1.5-flash"
+          # Custom instructions for your Tailwind v4 setup
+          system_instruction: |
+            You are a Senior Frontend Engineer. 
+            Review the code for bugs, performance issues, and adherence to clean code.
+            Note: This project uses Tailwind v4, so ensure CSS variables and @theme are used correctly.
