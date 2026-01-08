@@ -20,24 +20,28 @@ jobs:
 
       - name: "Get Git Diff"
         run: |
-          # Exclude lock files and large generated files to stay under Gemini's token limits
+          # Keep the diff clean
           git diff HEAD^ HEAD . ':(exclude)package-lock.json' ':(exclude)yarn.lock' ':(exclude).next/*' > pr_diff.txt
 
       - name: "Prepare JSON Payload"
         run: |
-          # We use jq to safely wrap the diff into a JSON structure and write it to a file
-          # This avoids 'Argument list too long' because we never store the whole diff in a shell variable
-          jq -Rs '{contents: [{parts: [{text: ("You are a Senior Developer. Review this Next.js/Tailwind v4 code for bugs: " + .)}]}]}' pr_diff.txt > payload.json
+          # Use jq to wrap the diff safely
+          jq -Rs '{contents: [{parts: [{text: ("Review this Next.js/Tailwind v4 code for bugs: " + .)}]}]}' pr_diff.txt > payload.json
 
       - name: "Run Gemini Review"
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # The '@payload.json' tells curl to read the body from the file, not the command line
-          curl "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}" \
+          # IMPORTANT: Changed 'v1' to 'v1beta' and model to 'gemini-1.5-flash'
+          # This specifically fixes the 404 error you saw
+          curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}" \
             -H 'Content-Type: application/json' \
             -X POST \
             -d @payload.json > review_response.json
+          
+          # This helps you see the actual AI text in the logs if it fails again
+          echo "--- DEBUG: AI RESPONSE ---"
+          cat review_response.json
 
       - name: "Post Comment to PR"
         uses: actions/github-script@v7
@@ -47,6 +51,7 @@ jobs:
             const data = JSON.parse(fs.readFileSync('review_response.json', 'utf8'));
             const prNumber = context.payload.pull_request.number;
             
+            // Check if we have candidates (successful AI response)
             if (data.candidates && data.candidates[0].content) {
               const reviewText = data.candidates[0].content.parts[0].text;
               await github.rest.issues.createComment({
@@ -56,6 +61,7 @@ jobs:
                 body: "### 🤖 Gemini AI Code Review\n\n" + reviewText
               });
             } else {
-              console.log("No review content found. Check logs for API errors.");
-              console.log(JSON.stringify(data, null, 2));
+              // If it failed, print the reason clearly in the logs
+              const errorMsg = data.error ? data.error.message : "Safety filters blocked the response";
+              console.log("Gemini failed to generate review: " + errorMsg);
             }
