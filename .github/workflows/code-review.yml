@@ -31,8 +31,8 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # UPDATED MODEL: Using gemini-2.0-flash (The stable 2026 workhorse)
-          curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}" \
+          # We use 1.5-flash-latest because it has the most stable free-tier quota in 2026
+          curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}" \
             -H 'Content-Type: application/json' \
             -X POST \
             -d @payload.json > review_response.json
