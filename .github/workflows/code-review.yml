@@ -1,0 +1,70 @@
+name: "Gemini AI Reviewer"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.number != null
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: "Get Git Diff"
+        run: |
+          # Only include actual code to stay under the 250k token limit
+          git diff HEAD^ HEAD -- \
+            '*.ts' '*.tsx' '*.js' '*.jsx' '*.css' \
+            ':(exclude)package-lock.json' \
+            ':(exclude)yarn.lock' \
+            ':(exclude).next/*' \
+            ':(exclude)node_modules/*' \
+            ':(exclude)public/*' \
+            ':(exclude).git/*' > pr_diff.txt
+
+      - name: "Prepare JSON Payload"
+        run: |
+          # Use jq to wrap the diff safely
+          jq -Rs '{contents: [{parts: [{text: ("Review this Next.js/Tailwind v4 code for bugs: " + .)}]}]}' pr_diff.txt > payload.json
+
+      - name: "Run Gemini Review"
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          # Using Gemini 3 Flash to avoid 404s
+          curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}" \
+            -H 'Content-Type: application/json' \
+            -X POST \
+            -d @payload.json > review_response.json
+          
+          echo "--- DEBUG: AI RESPONSE ---"
+          cat review_response.json
+
+      - name: "Post Comment to PR"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const data = JSON.parse(fs.readFileSync('review_response.json', 'utf8'));
+            const prNumber = context.payload.pull_request.number;
+            
+            if (data.candidates && data.candidates[0].content) {
+              const reviewText = data.candidates[0].content.parts[0].text;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: "### 🤖 Gemini 3 AI Code Review\n\n" + reviewText
+              });
+            } else {
+              const errorMsg = data.error ? data.error.message : "Safety filters blocked the response or API limit reached.";
+              console.log("Gemini failed: " + errorMsg);
+            }
