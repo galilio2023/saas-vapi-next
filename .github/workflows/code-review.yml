@@ -20,19 +20,20 @@ jobs:
 
       - name: "Get Git Diff"
         run: |
+          # Exclude heavy files to keep the payload clean
           git diff HEAD^ HEAD . ':(exclude)package-lock.json' ':(exclude)yarn.lock' ':(exclude).next/*' > pr_diff.txt
 
       - name: "Prepare JSON Payload"
         run: |
-          # Use jq to wrap the diff safely
-          jq -Rs '{contents: [{parts: [{text: ("Review this Next.js/Tailwind v4 code for bugs: " + .)}]}]}' pr_diff.txt > payload.json
+          # Use jq to wrap the diff safely into a JSON structure
+          jq -Rs '{contents: [{parts: [{text: ("Review this Next.js/Tailwind v4 code for bugs and logic errors: " + .)}]}]}' pr_diff.txt > payload.json
 
       - name: "Run Gemini Review"
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # We use 1.5-flash-latest because it has the most stable free-tier quota in 2026
-          curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}" \
+          # 2026 STABLE MODEL: Using gemini-3-flash-preview on v1beta
+          curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}" \
             -H 'Content-Type: application/json' \
             -X POST \
             -d @payload.json > review_response.json
@@ -54,9 +55,9 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prNumber,
-                body: "### 🤖 Gemini AI Code Review\n\n" + reviewText
+                body: "### 🤖 Gemini 3 AI Code Review\n\n" + reviewText
               });
             } else {
-              const errorMsg = data.error ? data.error.message : "Possible safety block or empty response";
+              const errorMsg = data.error ? data.error.message : "Safety filters blocked the response or API limit reached.";
               console.log("Gemini failed: " + errorMsg);
             }
