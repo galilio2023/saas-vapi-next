@@ -12,16 +12,18 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - name: "Gemini Review"
-        uses: google-gemini/gemini-github-action@v1
+      - name: "Run AI Review"
+        uses: petarzarkov/gemini-code-review-action@latest
         with:
-          apiKey: ${{ secrets.GEMINI_API_KEY }}
-          model: "gemini-1.5-flash"
-          prompt: |
-            You are a Senior Full-Stack Engineer expert in Next.js 16 and Tailwind v4.
-            Review this code for:
-            1. Tailwind v4 @theme usage and CSS-first patterns.
-            2. React 19 / Next.js 16 App Router best practices.
-            3. Logic bugs in Vapi.ai voice streams or Supabase auth.
-            Keep comments concise and actionable.
-          files: "**/*.{ts,tsx,css}"
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          model: "gemini-1.5-flash" # Best for Free Tier
+          custom_prompt: |
+            You are a Senior Full-Stack Engineer reviewing "Converso".
+            Tech Stack: Next.js 16, Tailwind v4, Supabase, Vapi.ai.
+            
+            Please review for:
+            1. **Tailwind v4**: Ensure @theme variables are used and font fallbacks are present.
+            2. **Logic**: Check for proper 'use client' vs 'use server' placement.
+            3. **Vapi**: Check for clean handling of voice streams.
+            
+            Keep comments short and actionable.
