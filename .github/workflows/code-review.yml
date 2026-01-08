@@ -17,9 +17,9 @@ jobs:
 
       - name: "Run Gemini Review"
         uses: petarzarkov/gemini-code-review-action@latest
-        # This ENV section fixes the "GITHUB_TOKEN is required" error
+        # This is the secret sauce: the action looks here for the key!
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           model: "gemini-1.5-flash"
