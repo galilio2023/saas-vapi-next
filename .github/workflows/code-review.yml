@@ -20,23 +20,21 @@ jobs:
       - name: "Get Git Diff"
         run: git diff HEAD^ HEAD > pr_diff.txt
 
+      - name: "Prepare JSON Payload"
+        run: |
+          # This safely escapes the diff text into a JSON file
+          DIFF_JSON=$(jq -Rs . pr_diff.txt)
+          echo "{\"contents\": [{\"parts\":[{\"text\": \"You are a Senior Developer. Review this git diff for a Next.js project using Tailwind v4. Check for bugs and unused code: $DIFF_JSON\"}]}]}" > payload.json
+
       - name: "Run Gemini Review via API"
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # We use the stable v1 endpoint which works best in Egypt
-          DIFF_CONTENT=$(cat pr_diff.txt | jq -sR .)
-          
+          # Using -d @payload.json tells curl to read from the file, avoiding 'Argument list too long'
           curl "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}" \
-            -H 'Content-Type: any/json' \
+            -H 'Content-Type: application/json' \
             -X POST \
-            -d "{
-              \"contents\": [{
-                \"parts\":[{
-                  \"text\": \"You are a Senior Developer. Review this git diff for a Next.js project using Tailwind v4. Check for bugs and unused code: $DIFF_CONTENT\"
-                }]
-              }]
-            }" > review_response.json
+            -d @payload.json > review_response.json
 
       - name: "Post Comment to PR"
         uses: actions/github-script@v7
@@ -44,11 +42,15 @@ jobs:
           script: |
             const fs = require('fs');
             const response = JSON.parse(fs.readFileSync('review_response.json', 'utf8'));
-            const reviewText = response.candidates[0].content.parts[0].text;
             
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: "### 🤖 Gemini AI Code Review\n\n" + reviewText
-            });
+            if (response.candidates && response.candidates[0].content.parts[0].text) {
+              const reviewText = response.candidates[0].content.parts[0].text;
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: "### 🤖 Gemini AI Code Review\n\n" + reviewText
+              });
+            } else {
+              console.log("No review content found in response:", response);
+            }
