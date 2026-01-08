@@ -14,15 +14,41 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
-
-      - name: "Run Gemini Review"
-        uses: mshick/google-gemini-github-action@v1
         with:
-          # Use your existing secret names
-          api-key: ${{ secrets.GEMINI_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          model: "gemini-1.5-flash"
-          system-instruction: |
-            You are an expert developer. Review this Next.js code.
-            Important: The project uses Tailwind v4. 
-            Check for proper CSS variable usage in @theme blocks and ensure no unused components are left in the PR.
+          fetch-depth: 2
+
+      - name: "Get Git Diff"
+        run: git diff HEAD^ HEAD > pr_diff.txt
+
+      - name: "Run Gemini Review via API"
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          # We use the stable v1 endpoint which works best in Egypt
+          DIFF_CONTENT=$(cat pr_diff.txt | jq -sR .)
+          
+          curl "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}" \
+            -H 'Content-Type: any/json' \
+            -X POST \
+            -d "{
+              \"contents\": [{
+                \"parts\":[{
+                  \"text\": \"You are a Senior Developer. Review this git diff for a Next.js project using Tailwind v4. Check for bugs and unused code: $DIFF_CONTENT\"
+                }]
+              }]
+            }" > review_response.json
+
+      - name: "Post Comment to PR"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const response = JSON.parse(fs.readFileSync('review_response.json', 'utf8'));
+            const reviewText = response.candidates[0].content.parts[0].text;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "### 🤖 Gemini AI Code Review\n\n" + reviewText
+            });
