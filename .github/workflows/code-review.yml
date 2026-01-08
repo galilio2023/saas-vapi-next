@@ -20,19 +20,26 @@ jobs:
 
       - name: "Get Git Diff"
         run: |
-          # Exclude heavy files to keep the payload clean
-          git diff HEAD^ HEAD . ':(exclude)package-lock.json' ':(exclude)yarn.lock' ':(exclude).next/*' > pr_diff.txt
+          # Only include actual code to stay under the 250k token limit
+          git diff HEAD^ HEAD -- \
+            '*.ts' '*.tsx' '*.js' '*.jsx' '*.css' \
+            ':(exclude)package-lock.json' \
+            ':(exclude)yarn.lock' \
+            ':(exclude).next/*' \
+            ':(exclude)node_modules/*' \
+            ':(exclude)public/*' \
+            ':(exclude).git/*' > pr_diff.txt
 
       - name: "Prepare JSON Payload"
         run: |
-          # Use jq to wrap the diff safely into a JSON structure
-          jq -Rs '{contents: [{parts: [{text: ("Review this Next.js/Tailwind v4 code for bugs and logic errors: " + .)}]}]}' pr_diff.txt > payload.json
+          # Use jq to wrap the diff safely
+          jq -Rs '{contents: [{parts: [{text: ("Review this Next.js/Tailwind v4 code for bugs: " + .)}]}]}' pr_diff.txt > payload.json
 
       - name: "Run Gemini Review"
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # 2026 STABLE MODEL: Using gemini-3-flash-preview on v1beta
+          # Using Gemini 3 Flash to avoid 404s
           curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}" \
             -H 'Content-Type: application/json' \
             -X POST \
