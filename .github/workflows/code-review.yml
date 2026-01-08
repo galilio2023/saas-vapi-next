@@ -12,14 +12,20 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout repository"
+      - name: "Checkout code"
         uses: actions/checkout@v4
 
-      - name: "Run Gemini Review"
-        uses: petarzarkov/gemini-code-review-action@latest
-        # This is the secret sauce: the action looks here for the key!
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: "Run AI Review"
+        uses: sshnaidm/gemini-code-review-action@v1
         with:
+          # Use the names this specific action requires:
+          gemini-key: ${{ secrets.GEMINI_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           model: "gemini-1.5-flash"
+          # This forces a strict review for your SaaS
+          prompt: |
+            You are a Senior Full-Stack Developer. 
+            Review this Next.js 16 + Tailwind v4 project.
+            - Point out unused variables like 'const x'.
+            - Check for 'use server' security in actions.
+            - Ensure Tailwind v4 best practices.
