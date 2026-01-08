@@ -14,18 +14,15 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: "Google Gemini Code Review"
-        uses: google-gemini/pro-code-review-action@v1.1.0
+      - name: "Run Gemini Review"
+        uses: mshick/google-gemini-github-action@v1
         with:
-          # This action is officially maintained and more stable
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Use your existing secret names
+          api-key: ${{ secrets.GEMINI_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           model: "gemini-1.5-flash"
-          # Custom instructions for your Tailwind v4 setup
-          system_instruction: |
-            You are a Senior Frontend Engineer. 
-            Review the code for bugs, performance issues, and adherence to clean code.
-            Note: This project uses Tailwind v4, so ensure CSS variables and @theme are used correctly.
+          system-instruction: |
+            You are an expert developer. Review this Next.js code.
+            Important: The project uses Tailwind v4. 
+            Check for proper CSS variable usage in @theme blocks and ensure no unused components are left in the PR.
