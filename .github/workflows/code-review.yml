@@ -12,18 +12,14 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - name: "Run AI Review"
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "Run Gemini Review"
         uses: petarzarkov/gemini-code-review-action@latest
+        # This ENV section fixes the "GITHUB_TOKEN is required" error
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          model: "gemini-1.5-flash" # Best for Free Tier
-          custom_prompt: |
-            You are a Senior Full-Stack Engineer reviewing "Converso".
-            Tech Stack: Next.js 16, Tailwind v4, Supabase, Vapi.ai.
-            
-            Please review for:
-            1. **Tailwind v4**: Ensure @theme variables are used and font fallbacks are present.
-            2. **Logic**: Check for proper 'use client' vs 'use server' placement.
-            3. **Vapi**: Check for clean handling of voice streams.
-            
-            Keep comments short and actionable.
+          model: "gemini-1.5-flash"
