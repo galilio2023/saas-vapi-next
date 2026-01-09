@@ -39,3 +39,31 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+# --- ADD THESE TO YOUR .GITIGNORE ---
+
+# local env files
+# Crucial for Egypt/Privacy: Never commit your VAPI_PRIVATE_KEY or GEMINI_API_KEY
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# tailwind v4 / postcss
+# Tailwind v4 sometimes generates temporary build artifacts in a .cache folder
+.cache/
+.parcel-cache/
+
+# vapi / voice sdk logs
+# If you use the Vapi CLI or SDK, it might generate local logs
+vapi-logs.json
+
+# IDE - VS Code
+# This keeps your personal VS Code settings out of the repo
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# turbo
+.turbo
