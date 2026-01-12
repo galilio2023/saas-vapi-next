@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/dist/client/components/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const navItems = [
