@@ -1,6 +1,5 @@
-import React from "react";
-
-const Page = () => {
-  return <div>Page</div>;
+const CompanionsLibrary = () => {
+  return <div>CompanionsLibrary</div>;
 };
-export default Page;
+
+export default CompanionsLibrary;
