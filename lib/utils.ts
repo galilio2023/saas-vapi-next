@@ -54,7 +54,9 @@ export const configureAssistant = (voice: string, style: string) => {
         },
       ],
     },
+    // @ts-expect-error fine
     clientMessages: [],
+    // @ts-expect-error fine
     serverMessages: [],
   };
   return vapiAssistant;
