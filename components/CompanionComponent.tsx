@@ -28,7 +28,7 @@ const CompanionComponent = ({
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const lottieRef = useRef<LottieRefCurrentProps>(null);
   useEffect(() => {
-    if (lottieRef) {
+    if (lottieRef.current) {
       if (isSpeaking) {
         lottieRef.current?.play();
       } else {
@@ -55,6 +55,7 @@ const CompanionComponent = ({
     vapi.on("speech-start", onSpeechStart);
     vapi.on("speech-end", onSpeechEnd);
     return () => {
+      vapi.stop();
       vapi.off("call-start", onCallStart);
       vapi.off("call-end", onCallEnd);
       vapi.off("message", onMessage);
@@ -179,8 +180,7 @@ const CompanionComponent = ({
             if (message.role === "assistant") {
               return (
                 <p className="max-sm:text-sm" key={index}>
-                  {name.split(" ")[0].replace("/[.,]/g,", "")}:{" "}
-                  {message.content}
+                  {name.split(" ")[0].replace(/[.,]/g, "")}:{message.content}
                 </p>
               );
             } else {
